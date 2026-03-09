@@ -1,115 +1,504 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Underground Echoes</title>
+<title>Fred-The-Minesweeper</title>
+<link rel="icon" type="image/png" href="favicon-180.png" />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-    body {
-        background: #111;
-        color: #eee;
-        font-family: Arial, sans-serif;
-        display: flex;
-        gap: 20px;
-        padding: 20px;
-    }
+  :root {
+    --green-dark: #0a3d0a;
+    --green-mid: #0a5c0a;
+    --green-light: #0e7c0e;
+    --dirt: #6b3f1e;
+    --dirt-light: #8a5a2a;
+    --gold: #f5c542;
+    --red: #c0392b;
+    --bg: #0d0d0d;
+    --panel-bg: #111;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --accent: #0e7c0e;
+  }
 
-    #leftPanel, #rightPanel {
-        width: 150px;
-    }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    #gameBoard {
-        display: grid;
-        gap: 0;
-        background: #000;
-    }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier Prime', monospace;
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 10% 20%, rgba(14,124,14,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(107,63,30,0.08) 0%, transparent 50%);
+  }
 
-    .cell {
-        width: 28px;
-        height: 28px;
-        background: #0a4;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 14px;
-        cursor: pointer;
-    }
+  /* ─── PANELS ─── */
+  #leftPanel, #rightPanel {
+    width: 140px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+  }
 
-    .cell-dug {
-        background: #835629;
-        cursor: default;
-    }
+  .panel-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--gold);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
 
-    .cell-exploded {
-        background: #d00;
-        color: #fff;
-    }
+  /* ─── BUTTONS ─── */
+  .btn {
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: var(--text);
+    font-family: 'Courier Prime', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .btn:hover { background: #252525; border-color: #555; }
+  .btn.active {
+    background: var(--green-dark);
+    border-color: var(--green-light);
+    color: #7fff7f;
+  }
 
-    #popup {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #222;
-        padding: 20px;
-        border: 2px solid #555;
-        display: none;
-    }
+  /* ─── MAIN GAME AREA ─── */
+  #gameArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-    button {
-        padding: 6px 10px;
-        margin: 4px;
-    }
+  #mainTitle {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
 
-    button.active {
-        background: #0a4;
-        color: white;
-    }
+  #statusBar {
+    display: flex;
+    gap: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #aaa;
+    border-bottom: 1px solid #222;
+    padding-bottom: 8px;
+  }
+
+  #statusBar span { color: #ddd; }
+
+  /* ─── BOARD ─── */
+  #gameBoard {
+    display: grid;
+    gap: 1px;
+    background: #080808;
+    border: 2px solid #222;
+    width: fit-content;
+  }
+
+  .cell {
+    width: 28px;
+    height: 28px;
+    background: var(--green-mid);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.08s;
+    user-select: none;
+    border-radius: 1px;
+    position: relative;
+  }
+  .cell:hover { background: var(--green-light); transform: scale(1.05); z-index: 1; }
+  .cell-dug {
+    background: var(--dirt);
+    cursor: default;
+    transform: none !important;
+  }
+  .cell-dug:hover { background: var(--dirt); }
+  .cell-exploded {
+    background: var(--red) !important;
+    animation: explode 0.4s ease-out;
+  }
+  @keyframes explode {
+    0%   { transform: scale(1.5); background: #fff; }
+    50%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  /* ─── OVERLAY ─── */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  #overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ─── MODAL ─── */
+  .modal {
+    background: #141414;
+    border: 1px solid #333;
+    padding: 32px 36px;
+    min-width: 320px;
+    max-width: 440px;
+    text-align: center;
+    position: relative;
+    animation: popIn 0.2s ease-out;
+    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.9) translateY(10px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .modal-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    animation: bounce 0.5s ease-out;
+  }
+  @keyframes bounce {
+    0%   { transform: translateY(-20px); opacity: 0; }
+    60%  { transform: translateY(4px); }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+  .modal-title.red   { color: #e74c3c; }
+  .modal-title.gold  { color: var(--gold); }
+  .modal-title.green { color: #2ecc71; }
+
+  .modal-body {
+    font-size: 14px;
+    color: #bbb;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .modal-stats {
+    background: #0d0d0d;
+    border: 1px solid #222;
+    padding: 12px;
+    margin-bottom: 20px;
+    text-align: left;
+    font-size: 13px;
+  }
+  .modal-stats div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .modal-stats .val { color: var(--gold); font-weight: 700; }
+
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+  .btn-modal {
+    padding: 10px 22px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .btn-modal-primary {
+    background: var(--green-mid);
+    border: 1px solid var(--green-light);
+    color: #7fff7f;
+  }
+  .btn-modal-primary:hover { background: var(--green-light); color: #fff; }
+
+  .btn-modal-danger {
+    background: #3d0000;
+    border: 1px solid #c0392b;
+    color: #ff7070;
+  }
+  .btn-modal-danger:hover { background: #5a0000; }
+
+  .btn-modal-neutral {
+    background: #1e1e1e;
+    border: 1px solid #444;
+    color: #bbb;
+  }
+  .btn-modal-neutral:hover { background: #2a2a2a; color: #eee; }
+
+  /* ─── NUMBER COLORS ─── */
+  .n1 { color: #4fc3f7; }
+  .n2 { color: #81c784; }
+  .n3 { color: #e57373; }
+  .n4 { color: #9575cd; }
+  .n5 { color: #ff8a65; }
+  .n6 { color: #4dd0e1; }
+  .n7 { color: #f06292; }
+  .n8 { color: #bdbdbd; }
+
+  /* ─── SCAN LINE EFFECT ─── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
 </style>
 </head>
 
 <body>
 
+<!-- LEFT PANEL -->
 <div id="leftPanel">
-    <h3 id="langTitle">Language</h3>
-    <button onclick="setLang('en')">English</button>
-    <button onclick="setLang('vi')">Tiếng Việt</button>
+  <div class="panel-title" id="langTitle">Language</div>
+  <button class="btn active" onclick="setLang('en')">🇬🇧 English</button>
+  <button class="btn" onclick="setLang('vi')">🇻🇳 Tiếng Việt</button>
 </div>
 
-<div>
-    <h2 id="mainTitle">Underground Echoes</h2>
-    <div id="status">Day: 1 | Findings: none</div>
+<!-- GAME AREA -->
+<div id="gameArea">
+  <h2 id="mainTitle">Minesweeper: Stage 1</h2>
 
-    <div id="gameBoard"></div>
+  <div id="statusBar">
+    <div id="statusDay">Day: <span id="valDay">1</span></div>
+    <div id="statusFindings">Findings: <span id="valFindings">none</span></div>
+    <div id="statusMoves">Digs: <span id="valMoves">0</span></div>
+  </div>
+
+  <div id="gameBoard"></div>
 </div>
 
+<!-- RIGHT PANEL -->
 <div id="rightPanel">
-    <h3 id="digModeTitle">Dig Mode</h3>
-    <button onclick="setDigMode(1)" class="active">1×1</button>
-    <button onclick="setDigMode(3)">3×3</button>
-    <button onclick="setDigMode(5)">5×5</button>
+  <div class="panel-title" id="digModeTitle">Dig Mode</div>
+  <button class="btn active" id="btn1x1" onclick="setDigMode(1)">⛏ 1×1</button>
+  <button class="btn" id="btn3x3" onclick="setDigMode(3)">⛏ 3×3</button>
+  <button class="btn" id="btn5x5" onclick="setDigMode(5)">⛏ 5×5</button>
 </div>
 
-<div id="popup">
-    <div id="popupText"></div>
-    <button onclick="closePopup()">OK</button>
+<!-- OVERLAY + MODAL -->
+<div id="overlay">
+  <div class="modal" id="modal">
+    <span class="modal-icon" id="modalIcon">💥</span>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-stats" id="modalStats" style="display:none"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
 </div>
 
 <script>
+  // ──────────────────────────────────────────────────────────
+  // STATE
+  // ──────────────────────────────────────────────────────────
   let day = 1;
   let findings = [];
   let switchCount = 0;
   let currentLang = 'en';
   let currentDigMode = 1;
+  let moveCount = 0;
+  let board = [];
+  let size = 0;
+  let gameActive = true;
 
-  const size = Math.floor(Math.random() * 11) + 10;
-  const board = [];
+  // ──────────────────────────────────────────────────────────
+  // TRANSLATIONS
+  // ──────────────────────────────────────────────────────────
+  const T = {
+    gameOver: {
+      en: "GAME OVER",
+      vi: "THUA RỒI"
+    },
+    mineHit: {
+      en: "Fred dug up a mine and got blown to pieces!",
+      vi: "Fred đào trúng mìn và bị nổ tung!"
+    },
+    playAgain: {
+      en: "Play Again",
+      vi: "Chơi Lại"
+    },
+    switchTitle: {
+      en: "⚠ STRANGE SWITCH",
+      vi: "⚠ CÔNG TẮC LẠ"
+    },
+    switchBody: {
+      en: "Fred found a mysterious switch in the dirt.\nDo you dare flip it?",
+      vi: "Fred tìm thấy một công tắc bí ẩn dưới đất.\nBạn có dám bật không?"
+    },
+    flipIt: {
+      en: "Flip It!",
+      vi: "Bật Lên!"
+    },
+    leaveIt: {
+      en: "Leave It",
+      vi: "Bỏ Qua"
+    },
+    evilTitle: {
+      en: "THE DARKNESS AWAKENS",
+      vi: "BÓNG TỐI THỨC TỈNH"
+    },
+    evilBody: {
+      en: "You flipped the switch 666 times...\nThe ancient darkness stirs beneath the earth.",
+      vi: "Bạn đã bật công tắc 666 lần...\nBóng tối cổ xưa thức dậy dưới lòng đất."
+    },
+    ok: {
+      en: "OK",
+      vi: "OK"
+    },
+    statsDay: { en: "Day", vi: "Ngày" },
+    statsDigs: { en: "Total Digs", vi: "Tổng lần đào" },
+    statsFossils: { en: "Fossils Found", vi: "Xương hóa thạch" },
+    statsTreasures: { en: "Treasures Found", vi: "Kho báu" },
+    statsSwitches: { en: "Switches Flipped", vi: "Công tắc đã bật" },
+    none: { en: "none", vi: "không có" },
+    findings: { en: "Findings", vi: "Phát hiện" },
+    digs: { en: "Digs", vi: "Lần đào" },
+  };
 
+  function t(key) { return T[key][currentLang] || T[key]['en']; }
+
+  // ──────────────────────────────────────────────────────────
+  // MODAL SYSTEM
+  // ──────────────────────────────────────────────────────────
+  function showModal({ icon, titleClass, title, body, stats, actions }) {
+    document.getElementById('modalIcon').textContent = icon || '';
+    const titleEl = document.getElementById('modalTitle');
+    titleEl.className = 'modal-title ' + (titleClass || '');
+    titleEl.textContent = title || '';
+    document.getElementById('modalBody').textContent = body || '';
+
+    const statsEl = document.getElementById('modalStats');
+    if (stats) {
+      statsEl.style.display = 'block';
+      statsEl.innerHTML = stats.map(([k, v]) =>
+        `<div><span>${k}</span><span class="val">${v}</span></div>`
+      ).join('');
+    } else {
+      statsEl.style.display = 'none';
+    }
+
+    const actionsEl = document.getElementById('modalActions');
+    actionsEl.innerHTML = '';
+    (actions || []).forEach(({ label, cls, cb }) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-modal ' + (cls || 'btn-modal-neutral');
+      btn.textContent = label;
+      btn.onclick = () => { hideModal(); cb && cb(); };
+      actionsEl.appendChild(btn);
+    });
+
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function hideModal() {
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // GAME OVER MODAL
+  // ──────────────────────────────────────────────────────────
+  function showGameOver() {
+    gameActive = false;
+    const fossils = findings.filter(f => f === 'fossil').length;
+    const treasures = findings.filter(f => f === 'treasure').length;
+
+    showModal({
+      icon: '💥',
+      titleClass: 'red',
+      title: t('gameOver'),
+      body: t('mineHit'),
+      stats: [
+        [t('statsDay'), day],
+        [t('statsDigs'), moveCount],
+        [t('statsFossils'), fossils],
+        [t('statsTreasures'), treasures],
+        [t('statsSwitches'), switchCount],
+      ],
+      actions: [
+        {
+          label: t('playAgain'),
+          cls: 'btn-modal-primary',
+          cb: () => restartGame()
+        }
+      ]
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // SWITCH MODAL
+  // ──────────────────────────────────────────────────────────
+  function showSwitchModal() {
+    showModal({
+      icon: '🔧',
+      titleClass: 'gold',
+      title: t('switchTitle'),
+      body: t('switchBody'),
+      actions: [
+        {
+          label: t('flipIt'),
+          cls: 'btn-modal-danger',
+          cb: () => {
+            switchCount++;
+            if (switchCount === 666) {
+              setTimeout(() => showEvilModal(), 100);
+            }
+          }
+        },
+        {
+          label: t('leaveIt'),
+          cls: 'btn-modal-neutral',
+          cb: null
+        }
+      ]
+    });
+  }
+
+  function showEvilModal() {
+    showModal({
+      icon: '👁',
+      titleClass: 'red',
+      title: t('evilTitle'),
+      body: t('evilBody'),
+      actions: [{ label: t('ok'), cls: 'btn-modal-neutral', cb: null }]
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // BOARD SETUP
+  // ──────────────────────────────────────────────────────────
   function chooseElement() {
     const r = Math.random();
-
     if (r < 0.04) return "switch";
     else if (r < 0.10) return "mine";
     else if (r < 0.13) return "fossil";
@@ -119,8 +508,12 @@
 
   function setupBoard() {
     const boardDiv = document.getElementById("gameBoard");
-    boardDiv.style.gridTemplateColumns = `repeat(${size}, 30px)`;
-    boardDiv.style.gridTemplateRows = `repeat(${size}, 30px)`;
+    boardDiv.innerHTML = '';
+    board.length = 0;
+
+    size = Math.floor(Math.random() * 11) + 10;
+    boardDiv.style.gridTemplateColumns = `repeat(${size}, 29px)`;
+    boardDiv.style.gridTemplateRows = `repeat(${size}, 29px)`;
 
     let spawnedSwitch = false;
 
@@ -128,7 +521,6 @@
       board[y] = [];
       for (let x = 0; x < size; x++) {
         let element = chooseElement();
-
         if (element === "switch") {
           if (spawnedSwitch) element = "empty";
           else spawnedSwitch = true;
@@ -139,46 +531,33 @@
 
         const div = document.createElement("div");
         div.classList.add("cell");
-        div.onclick = () => reveal(cell);
-
+        div.onclick = () => { if (gameActive) reveal(cell); };
         cell._div = div;
         boardDiv.appendChild(div);
       }
     }
-    
-    updateStatus();
+
+    updateStatusBar();
   }
 
+  // ──────────────────────────────────────────────────────────
+  // REVEAL LOGIC
+  // ──────────────────────────────────────────────────────────
   function countMines(x, y) {
     let c = 0;
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx || dy) {
-          const nx = x + dx, ny = y + dy;
-          if (board[ny] && board[ny][nx] && board[ny][nx].element === "mine") c++;
-        }
-      }
-    }
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++)
+        if ((dx || dy) && board[y + dy] && board[y + dy][x + dx]?.element === "mine") c++;
     return c;
-  }
-
-  function addFinding(type) {
-    findings.push(type);
-    updateStatus();
   }
 
   function reveal(cell) {
     if (currentDigMode !== 1) return digArea(cell.x, cell.y, currentDigMode);
-
     if (cell.revealed) return;
     cell.revealed = true;
-
+    moveCount++;
     drawCell(cell);
-
-    if (cell.element === "mine") {
-      alert(getText("mineHit"));
-      location.reload();
-    }
+    updateStatusBar();
   }
 
   function drawCell(c) {
@@ -189,109 +568,109 @@
       case "mine":
         div.classList.add("cell-exploded");
         div.textContent = "💥";
+        setTimeout(() => showGameOver(), 200);
         break;
 
       case "switch":
         div.textContent = "🔧";
-        if (confirm(getText("toggleSwitch"))) {
-          switchCount++;
-          if (switchCount === 666) alert(getText("evilEvent"));
-        }
+        setTimeout(() => showSwitchModal(), 100);
         break;
 
       case "fossil":
         div.textContent = "🦴";
-        addFinding("fossil");
+        findings.push("fossil");
+        updateStatusBar();
         break;
 
       case "treasure":
         div.textContent = "💰";
-        addFinding("treasure");
+        findings.push("treasure");
+        updateStatusBar();
         break;
 
       default:
-        let m = countMines(c.x, c.y);
-        div.textContent = m === 0 ? "" : m;
+        const m = countMines(c.x, c.y);
+        div.textContent = m > 0 ? m : '';
+        if (m > 0) {
+          div.classList.add(`n${m}`);
+          div.style.fontWeight = '700';
+        }
         break;
     }
   }
 
   function digArea(cx, cy, mode) {
-    let r = mode === 3 ? 1 : (mode === 5 ? 2 : 0);
-
+    const r = mode === 3 ? 1 : (mode === 5 ? 2 : 0);
     let triggeredMine = false;
 
     for (let y = cy - r; y <= cy + r; y++) {
       for (let x = cx - r; x <= cx + r; x++) {
         if (!board[y] || !board[y][x]) continue;
-
         const c = board[y][x];
         if (c.revealed) continue;
-
         c.revealed = true;
         drawCell(c);
-
         if (c.element === "mine") triggeredMine = true;
       }
     }
 
+    moveCount++;
+    updateStatusBar();
+
     if (triggeredMine) {
-      alert(getText("mineHit"));
-      location.reload();
-      return;
+      setTimeout(() => showGameOver(), 300);
     }
-
-    updateStatus();
   }
 
-  function updateStatus() {
-    const L = currentLang;
-    const txt = L === 'vi'
-      ? `Ngày: ${day} | Phát hiện: ${findings.length ? findings.join(', ') : 'không có'}`
-      : `Day: ${day} | Findings: ${findings.length ? findings.join(', ') : 'none'}`;
-    document.getElementById("status").textContent = txt;
+  // ──────────────────────────────────────────────────────────
+  // STATUS BAR
+  // ──────────────────────────────────────────────────────────
+  function updateStatusBar() {
+    document.getElementById('valDay').textContent = day;
+    document.getElementById('valMoves').textContent = moveCount;
+
+    const fLabel = findings.length
+      ? findings.join(', ')
+      : t('none');
+    document.getElementById('valFindings').textContent = fLabel;
+
+    // Update labels
+    document.getElementById('statusDay').childNodes[0].textContent = t('statsDay') + ': ';
+    document.getElementById('statusFindings').childNodes[0].textContent = t('findings') + ': ';
+    document.getElementById('statusMoves').childNodes[0].textContent = t('digs') + ': ';
   }
 
+  // ──────────────────────────────────────────────────────────
+  // CONTROLS
+  // ──────────────────────────────────────────────────────────
   function setLang(lang) {
     currentLang = lang;
-    updateStatus();
+    document.querySelectorAll('#leftPanel .btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    updateStatusBar();
   }
 
   function setDigMode(mode) {
     currentDigMode = mode;
-    
-    // Update button styles
-    document.querySelectorAll('#rightPanel button').forEach(btn => {
-      btn.classList.remove('active');
+    ['btn1x1', 'btn3x3', 'btn5x5'].forEach(id => {
+      document.getElementById(id).classList.remove('active');
     });
     event.target.classList.add('active');
   }
 
-  function closePopup() {
-    document.getElementById("popup").style.display = "none";
+  function restartGame() {
+    day = 1;
+    findings = [];
+    switchCount = 0;
+    moveCount = 0;
+    gameActive = true;
+    setupBoard();
   }
 
-  const TEXT = {
-    mineHit: {
-      vi: "Fred đào được một quả mìn và bị nổ tung! Bắt đầu game lại.",
-      en: "Fred digs up a mine and gets blown up! Restarting game."
-    },
-    toggleSwitch: {
-      vi: "Gạt công tắc? (Coi chừng...)",
-      en: "Flip the switch? (Be careful...)"
-    },
-    evilEvent: {
-      vi: "Cánh cổng hắc ám mở ra...",
-      en: "The ancient darkness awakens..."
-    }
-  };
-
-  function getText(key) {
-    return TEXT[key][currentLang];
-  }
-
+  // ──────────────────────────────────────────────────────────
+  // INIT
+  // ──────────────────────────────────────────────────────────
   document.addEventListener("DOMContentLoaded", setupBoard);
 </script>
-
 </body>
 </html>
